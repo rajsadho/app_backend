@@ -13,7 +13,7 @@ DEBUG = True
 ''' Begin boilerplate code '''
 def create_app():
   app = Flask(__name__, static_url_path='')
-  app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://syxnxuingltlok:0f204d9820edc5f43a113aae5fb0d4cae2fb02549432ddffb8542cddb24ca965@ec2-35-174-35-242.compute-1.amazonaws.com:5432/d12efrparbomii'
+  app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
   app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
   app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
   app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 7)
