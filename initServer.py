@@ -12,13 +12,18 @@ DEBUG = True
 
 ''' Begin boilerplate code '''
 def create_app():
-  app = Flask(__name__, static_url_path='')
-  app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-  app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-  app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-  app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 7)
-  db.init_app(app)
-  return app
+    app = Flask(__name__, static_url_path='')
+
+    uri = os.environ.get("DATABASE_URL")  # or other relevant config var 
+    if uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql://", 1)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = uri
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+    app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 7)
+    db.init_app(app)
+    return app
 ''' End Boilerplate Code '''
 
 app = create_app()
