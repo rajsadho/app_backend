@@ -13,7 +13,7 @@ class User(db.Model):
         self.pw_hash = bcrypt.generate_password_hash(password)
 
     def check_password(self, password):
-        return bcrypt.check_password_hash(pw_hash, password)
+        return bcrypt.check_password_hash(self.pw_hash, password)
 
     def toDict(self):
         return{
