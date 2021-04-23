@@ -10,7 +10,7 @@ class User(db.Model):
     pw_hash = db.Column(db.String(128), nullable=False)
 
     def set_password(self, password):
-        self.pw_hash = bcrypt.generate_password_hash(password)
+        self.pw_hash = bcrypt.generate_password_hash(password).decode('utf8')
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.pw_hash, password)
