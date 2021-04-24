@@ -1,6 +1,9 @@
 # Virtual environment
 /env
 
+.env
+.vscode
+
 envsetup.py
 
 # Byte-compiled / optimized / DLL files

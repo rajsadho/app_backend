@@ -14,7 +14,7 @@ DEBUG = True
 def create_app():
     app = Flask(__name__, static_url_path='')
 
-    uri = os.environ.get("DATABASE_URL")  # or other relevant config var 
+    uri = os.environ.get('DATABASE_URL')
     if uri.startswith("postgres://"):
         uri = uri.replace("postgres://", "postgresql://", 1)
 

@@ -3,7 +3,7 @@ from flask_jwt import JWT, jwt_required, current_identity
 from sqlalchemy.exc import IntegrityError
 
 from initServer import app, bcrypt, db
-from models import User
+from models import User, Course, Employee, Review, MyCourse, Job
 
 
 ''' Set up JWT here '''
@@ -27,6 +27,12 @@ jwt = JWT(app, authenticate, identity)
 @app.route('/ping', methods=['GET'])
 def ping_pong():
     return jsonify('pong!')
+
+@app.route('/courses', methods=['GET'])
+def get_courses():
+    courses = Course.query.all()
+    courses = [course.toDict() for course in courses]
+    return jsonify(courses)
 
 # sanity check route
 @app.route('/signup', methods=['POST'])
