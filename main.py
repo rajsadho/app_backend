@@ -188,6 +188,17 @@ def add_review():
         db.session.add(review)
         setattr(check_mycourse, 'review', review)
         db.session.commit()
+        divisor= Review.query.filter(Review.mycourse_id == data['course_id']).count())
+        results =  Review.query.filter(Review.mycourse_id == data['course_id']).all()
+        for result in results
+            sum1 = sum1 + result.enjoyablity
+            sum2 = sum2 + result.difficulty 
+        enjoyabilty = round(sum1/divisor, 2)
+        difficulty = round (sum2/divisor, 2)
+        
+        rating = Course(difficulty=difficulty, enjoyabilty=enjoyabilty)
+        db.session.add(rating)
+        db.session.commit()
         return jsonify('Added review'), 200
     except:
         return jsonify("Could not add review"), 500
@@ -212,6 +223,17 @@ def edit_review(id):
 
     try:
         db.session.add(review)
+        db.session.commit()
+        divisor= Review.query.filter(Review.mycourse_id == data['course_id']).count())
+        results =  Review.query.filter(Review.mycourse_id == data['course_id']).all()
+        for result in results
+            sum1 = sum1 + result.enjoyablity
+            sum2 = sum2 + result.difficulty 
+        enjoyabilty = round(sum1/divisor, 2)
+        difficulty = round (sum2/divisor, 2)
+        
+        rating = Course(difficulty=difficulty, enjoyabilty=enjoyabilty)
+        db.session.add(rating)
         db.session.commit()
         return jsonify('Edited review'), 200
     except:
