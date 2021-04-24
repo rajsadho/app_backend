@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from flask_login import LoginManager, current_user, login_user, login_required, logout_user
 import os
 
@@ -25,6 +26,10 @@ def create_app():
     uri = os.environ.get('DATABASE_URL')
     if uri.startswith("postgres://"):
         uri = uri.replace("postgres://", "postgresql://", 1)
+
+    app.config['ENV'] = 'development'
+    app.config['DEBUG'] = True
+    app.config['TESTING'] = True
 
     app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
@@ -79,7 +84,7 @@ def get_courses():
     courses = [course.toDict() for course in courses]
     return jsonify(courses)
 
-@app.route('/course/<id>', methods=['GET'])
+@app.route('/courses/<int:id>', methods=['GET'])
 def get_course(id):
     course = Course.query.filter_by(id=id).first()
     if not course:
@@ -170,7 +175,10 @@ def get_reviews():
         if course.review:
             reviews.append(course.review.toDict())
 
-    return jsonify({"reviews": reviews}), 200
+    # new_avg = MyCourse.query.with_entities(func.avg(MyCourse.review.enjoyability).label('average').filter(MyCourse.course_id, course_id=data['course_id']))
+    # new_avg = MyCourse.query.with_entities(func.avg(MyCourse.id))
+
+    return jsonify({"reviews": reviews}, new_avg), 200
 
 @app.route('/myreviews', methods=['POST'])
 @login_required
@@ -188,6 +196,7 @@ def add_review():
         db.session.add(review)
         setattr(check_mycourse, 'review', review)
         db.session.commit()
+
         return jsonify('Added review'), 200
     except:
         return jsonify("Could not add review"), 500
@@ -241,6 +250,26 @@ def get_teachers():
     employees = [employee.toDict() for employee in employees]
     return jsonify(employees)
 
+@app.route('/courses/search', methods=['GET'])
+def search_results():
+    # data = request.get_json()
+    query = request.args.get('course')
+    if not query:
+        return jsonify("Must submit a query"), 404
+
+    results = Course.query.filter(func.lower(Course.course_code).contains(query.lower())).all()
+    if results:
+        results = [result.toDict() for result in results]
+        return jsonify(results), 200
+
+    results = Course.query.filter(func.lower(Course.name).contains(query.lower())).all()
+
+    if not results:
+        return jsonify("Course not found"), 404
+    else:
+        results = [result.toDict() for result in results]
+        return jsonify(results), 200
+    
 
 if __name__ == '__main__':
     app.run()
