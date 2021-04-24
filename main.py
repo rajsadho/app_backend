@@ -114,6 +114,7 @@ def get_course(id):
     return jsonify(to_send)
 
 @app.route('/course/<id>', methods=['DELETE'])
+@login_required
 def delete_course(id):
     course = Course.query.filter_by(id=id).first()
     if not course:
@@ -127,18 +128,50 @@ def delete_course(id):
         db.session.rollback()
         return jsonify('Server Error: Could not delete resource'), 500
 
-# @app.route('/mycourses', methods=['POST'])
-# def add_mycourse():
-#     coursedata = request.get_json()
+@app.route('/mycourses', methods=['GET'])
+@login_required
+def get_mycourses():
+    mycourses = MyCourse.query.filter_by(user_id=current_user.id)
+    
+    to_return = []
+    for mycourse in mycourses:
+        id = mycourse.id
+        course = mycourse.course.toDict()
+        if mycourse.review:
+            review = mycourse.review.toDict()
+        else:
+            review = None
+        to_return.append({'id': id, 'course': course, 'review': review})
+
+    return jsonify(to_return), 200
 
 
-# TODO Check for user id for authorisation
-@app.route('/mycourses/<id>', methods=['DELETE'])
-def delete_mycourse(id):
-    course = MyCourse.query.filter_by(id=id).first()
+@app.route('/mycourses', methods=['POST'])
+@login_required
+def add_mycourse():
+    coursedata = request.get_json()
+    if MyCourse.query.filter_by(course_id=coursedata['course_id'], user_id=current_user.id).all():
+        return jsonify('Course already added'), 409
+    course = Course.query.filter_by(id=coursedata['course_id']).first()
     if not course:
         return jsonify('Course not found'), 404
+    new_mycourse = MyCourse(user=current_user, course=course)
+    try:
+        db.session.add(new_mycourse)
+        db.session.commit()
+        return jsonify('Course added'), 200
+    except:
+        db.session.rollback()
+        return jsonify('Could not add course'), 500
 
+
+
+@app.route('/mycourses/<id>', methods=['DELETE'])
+@login_required
+def delete_mycourse(id):
+    course = MyCourse.query.filter_by(id=id, user_id=current_user.id).first()
+    if not course:
+        return jsonify('Course not found'), 404
     try:
         db.session.delete(course)
         db.session.commit()
@@ -147,6 +180,78 @@ def delete_mycourse(id):
         db.session.rollback()
         return jsonify('Server Error: Could not delete resource'), 500
 
+@app.route('/myreviews', methods=['GET'])
+@login_required
+def get_reviews():
+    reviews = []
+    for course in current_user.my_courses:
+        if course.review:
+            reviews.append(course.review.toDict())
+
+    return jsonify({"reviews": reviews}), 200
+
+@app.route('/myreviews', methods=['POST'])
+@login_required
+def add_review():
+    data = request.get_json()
+    check_mycourse = MyCourse.query.filter_by(user_id=current_user.id, course_id=data['course_id']).first()
+    if not check_mycourse:
+        return jsonify('Course not in user course list'), 404
+    if check_mycourse.review:
+        return jsonify('Review exists for course'), 409
+    
+    review = Review(text=data['text'], difficulty=data['difficulty'], enjoyability=data['enjoyability'])
+
+    try:
+        db.session.add(review)
+        setattr(check_mycourse, 'review', review)
+        db.session.commit()
+        return jsonify('Added review'), 200
+    except:
+        return jsonify("Could not add review"), 500
+
+@app.route('/myreviews/<id>', methods=['PUT'])
+@login_required
+def edit_review(id):
+    review = Review.query.filter_by(id=id).first()
+    if not review:
+        return jsonify('Review not found'), 404
+    if review.course.user_id is not current_user.id:
+        return jsonify('Can only edit your reviews'), 403
+
+    data = request.get_json()
+
+    if 'text' in data:
+        review.text = data['text']
+    if 'difficulty' in data:
+        review.difficulty = data['difficulty']
+    if 'enjoyability' in data:
+        review.enjoyability = data['enjoyability']
+
+    try:
+        db.session.add(review)
+        db.session.commit()
+        return jsonify('Edited review'), 200
+    except:
+        db.session.rollback()
+        return jsonify('Could not edit review'), 500
+
+@app.route('/myreviews/<id>', methods=['DELETE'])
+@login_required
+def delete_review(id):
+    review = Review.query.filter_by(id=id).first()
+    if not review:
+        return jsonify('Review not found'), 404
+    if review.course.user_id is not current_user.id:
+        return jsonify('Can only edit your reviews'), 403
+
+    try:
+        db.session.delete(review)
+        db.session.commit()
+        return jsonify('Review deleted'), 200
+    except:
+        db.session.rollback()
+        return jsonify("Could not delete review"), 500    
 
 @app.route('/teachers', methods=['GET'])
 def get_teachers():
