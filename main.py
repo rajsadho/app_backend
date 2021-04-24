@@ -241,6 +241,16 @@ def get_teachers():
     employees = [employee.toDict() for employee in employees]
     return jsonify(employees)
 
+@app.route('/search/<query>', methods=['GET'])
+def search_results(query):
+    results = []
+    results = Course.query.filter(Course.course_code.like(query)).all())
+    if not results: 
+        results.append(Course.query.filter(Course.name.like(query)).all())
+        if not results:
+            return jsonify('Result {query} Not Found ')
+    results.append(Course.query.filter(Course.name.like(query)).all())
+    return jsonify(results)
 
 if __name__ == '__main__':
     app.run()
