@@ -1,24 +1,27 @@
 from sqlalchemy.orm import column_property, backref
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 
-from initServer import bcrypt, db
+db = SQLAlchemy()
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), nullable=False, unique=True)
     email = db.Column(db.String(255), nullable=False, unique=True)
-    pw_hash = db.Column(db.String(128), nullable=False)
+    pw_hash = db.Column(db.String(255), nullable=False)
 
     # courses = db.relationship('Course', secondary='my_courses', backref='classes')
     courses = db.relationship('Course', secondary='my_courses', viewonly=True)
 
     def set_password(self, password):
-        self.pw_hash = bcrypt.generate_password_hash(password).decode('utf8')
+        self.pw_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return bcrypt.check_password_hash(self.pw_hash, password)
+        return check_password_hash(self.pw_hash, password)
 
     def toDict(self):
         return{
