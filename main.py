@@ -34,6 +34,57 @@ def get_courses():
     courses = [course.toDict() for course in courses]
     return jsonify(courses)
 
+@app.route('/course/<id>', methods=['GET'])
+def get_course(id):
+    course = Course.query.filter_by(id=id).first()
+    if not course:
+        return jsonify('Course not found'), 404
+
+    teachers = [teacher.toDict() for teacher in course.employees]
+
+    reviews = []
+    for ucourse in course.my_courses:
+        if ucourse.review:
+            reviews.append(ucourse.review.toDict())
+
+    to_send = {'teachers': teachers, 'reviews': reviews}
+    return jsonify(to_send)
+
+@app.route('/course/<id>', methods=['DELETE'])
+def delete_course(id):
+    course = Course.query.filter_by(id=id).first()
+    if not course:
+        return jsonify('Course not found'), 404
+
+    try:
+        db.session.delete(course)
+        db.session.commit()
+        return jsonify('Deleted'), 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify('Server Error: Could not delete resource'), 500
+
+@app.route('/mycourses/<id>', methods=['DELETE'])
+def delete_mycourse(id):
+    course = MyCourse.query.filter_by(id=id).first()
+    if not course:
+        return jsonify('Course not found'), 404
+
+    try:
+        db.session.delete(course)
+        db.session.commit()
+        return jsonify(''), 204
+    except:
+        db.session.rollback()
+        return jsonify('Server Error: Could not delete resource'), 500
+
+
+@app.route('/teachers', methods=['GET'])
+def get_teachers():
+    employees = Employee.query.all()
+    employees = [employee.toDict() for employee in employees]
+    return jsonify(employees)
+
 # sanity check route
 @app.route('/signup', methods=['POST'])
 def signup():

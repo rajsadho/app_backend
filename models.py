@@ -35,9 +35,9 @@ class MyCourse(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-    user = db.relationship('User', backref=backref('my_courses', passive_deletes='all'))
-    course = db.relationship('Course', backref=backref('my_courses', passive_deletes='all'))
-    review = db.relationship('Review', backref='course', lazy=True, uselist=False)
+    user = db.relationship('User', backref=backref('my_courses', cascade="all, delete-orphan"))
+    course = db.relationship('Course', backref=backref('my_courses', cascade="all, delete-orphan"))
+    review = db.relationship('Review', backref='course', lazy=True, uselist=False, cascade="all, delete-orphan")
 
     def toDict(self):
         return{
@@ -60,7 +60,7 @@ class Review(db.Model):
     def toDict(self):
         return{
             'id': self.id,
-            'course_id': self.course_id,
+            'mycourse_id': self.mycourse_id,
             'text': self.text,
             'difficulty': self.difficulty,
             'enjoyability': self.enjoyability
@@ -106,7 +106,7 @@ class Employee(db.Model):
         return{
             'id': self.id,
             'title': self.title,
-            'fname': self.dept,
+            'fname': self.fname,
             'sname': self.sname
         }
 
@@ -118,8 +118,8 @@ class Job(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'))
     position = db.Column(db.String(20), nullable=False)
     
-    employee = db.relationship('Employee', backref=backref('jobs', passive_deletes='all'))
-    course = db.relationship('Course', backref=backref('jobs', passive_deletes='all'))
+    employee = db.relationship('Employee', backref=backref('jobs', cascade="all, delete-orphan"))
+    course = db.relationship('Course', backref=backref('jobs', cascade="all, delete-orphan"))
 
     def toDict(self):
         return{
