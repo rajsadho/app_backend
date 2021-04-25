@@ -2,8 +2,12 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-from flask_login import LoginManager, current_user, login_user, login_required, logout_user
+from sqlalchemy.sql.expression import cast
+# from flask_login import LoginManager, current_user, login_user, login_required, logout_user
+from flask_jwt import JWT, jwt_required, current_identity
 import os
+from datetime import timedelta
+
 
 from models import db, User, Course, Employee, Review, MyCourse, Job
 
@@ -11,13 +15,13 @@ from models import db, User, Course, Employee, Review, MyCourse, Job
 # configuration
 DEBUG = True
 
-''' Begin Flask Login Functions '''
-login_manager = LoginManager()
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(user_id)
-
-''' End Flask Login Functions '''
+# ''' Begin Flask Login Functions '''
+# login_manager = LoginManager()
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return User.query.get(user_id)
+#
+# ''' End Flask Login Functions '''
 
 ''' Begin boilerplate code '''
 def create_app():
@@ -34,19 +38,40 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-    # app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 7)
-    login_manager.init_app(app)
+    
+    app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 1)
+       
+    
+    # login_manager.init_app(app)
     db.init_app(app)
     return app
 ''' End Boilerplate Code '''
 
 app = create_app()
 
+
 app.app_context().push()
+
+
 
 
 # enable CORS
 CORS(app, resources={r'/*': {'origins': '*'}})
+
+''' Set up JWT here '''
+def authenticate(uname, password):
+  #search for the specified user
+  user = User.query.filter_by(username=uname).first()
+  #if user is found and password matches
+  if user and user.check_password(password):
+    return user
+
+#Payload is a dictionary which is passed to the function by Flask JWT
+def identity(payload):
+  return User.query.get(payload['identity'])
+
+jwt = JWT(app, authenticate, identity)
+''' End JWT Setup '''
 
 
 @app.route('/signup', methods=['POST'])
@@ -62,21 +87,32 @@ def signup():
         return 'username or email already exists'
     return 'user created'
 
-@app.route('/login', methods=['POST'])
-def loginAction():
-    data = request.get_json()
-    user = User.query.filter_by(username = data['username']).first()
-    if user and user.check_password(data['password']):
-        login_user(user) # login the user
-        return jsonify('Logged in'), 200
+# @app.route('/login', methods=['POST'])
+# def loginAction():
+#     data = request.get_json()
+#     user = User.query.filter_by(username = data['username']).first()
+#     if user and user.check_password(data['password']):
+#         login_user(user) # login the user
+#         return jsonify('Logged in'), 200
 
-    return jsonify('Invalid credentials'), 401
+#     return jsonify('Invalid credentials'), 401
 
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    return jsonify('Logged Out'), 200
+# @app.route("/login", methods=["POST"])
+# def login():
+#     username = request.json.get("username", None)
+#     password = request.json.get("password", None)
+#     user = User.query.filter_by(username = username).one_or_none()
+#     if not user or not user.check_password(password):
+#         return jsonify({"msg": "Bad username or password"}), 401
+
+#     access_token = create_access_token(identity=user)
+#     return jsonify(access_token=access_token), 200   
+
+# @app.route("/logout")
+# @jwt_required()
+# def logout():
+#     logout_user()
+#     return jsonify('Logged Out'), 200
 
 @app.route('/courses', methods=['GET'])
 def get_courses():
@@ -101,7 +137,7 @@ def get_course(id):
     return jsonify(to_send)
 
 @app.route('/course/<id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_course(id):
     course = Course.query.filter_by(id=id).first()
     if not course:
@@ -116,9 +152,9 @@ def delete_course(id):
         return jsonify('Server Error: Could not delete resource'), 500
 
 @app.route('/mycourses', methods=['GET'])
-@login_required
+@jwt_required()
 def get_mycourses():
-    mycourses = MyCourse.query.filter_by(user_id=current_user.id)
+    mycourses = MyCourse.query.filter_by(user_id=current_identity.id)
     
     to_return = []
     for mycourse in mycourses:
@@ -134,15 +170,15 @@ def get_mycourses():
 
 
 @app.route('/mycourses', methods=['POST'])
-@login_required
+@jwt_required()
 def add_mycourse():
     coursedata = request.get_json()
-    if MyCourse.query.filter_by(course_id=coursedata['course_id'], user_id=current_user.id).all():
+    if MyCourse.query.filter_by(course_id=coursedata['course_id'], user_id=current_identity.id).all():
         return jsonify('Course already added'), 409
     course = Course.query.filter_by(id=coursedata['course_id']).first()
     if not course:
         return jsonify('Course not found'), 404
-    new_mycourse = MyCourse(user=current_user, course=course)
+    new_mycourse = MyCourse(user=current_identity, course=course)
     try:
         db.session.add(new_mycourse)
         db.session.commit()
@@ -154,9 +190,9 @@ def add_mycourse():
 
 
 @app.route('/mycourses/<id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_mycourse(id):
-    course = MyCourse.query.filter_by(id=id, user_id=current_user.id).first()
+    course = MyCourse.query.filter_by(id=id, user_id=current_identity.id).first()
     if not course:
         return jsonify('Course not found'), 404
     try:
@@ -168,23 +204,25 @@ def delete_mycourse(id):
         return jsonify('Server Error: Could not delete resource'), 500
 
 @app.route('/myreviews', methods=['GET'])
-@login_required
+@jwt_required()
 def get_reviews():
     reviews = []
-    for course in current_user.my_courses:
+    for course in current_identity.my_courses:
         if course.review:
             reviews.append(course.review.toDict())
 
     # new_avg = MyCourse.query.with_entities(func.avg(MyCourse.review.enjoyability).label('average').filter(MyCourse.course_id, course_id=data['course_id']))
     # new_avg = MyCourse.query.with_entities(func.avg(MyCourse.id))
-
+    new_avg = MyCourse.query.join(Review).with_entities(func.avg(Review.enjoyability).filter(MyCourse.course_id==1).label("avg")).scalar()
+    print(new_avg, type(new_avg), flush=True)
+    new_avg = float(new_avg)
     return jsonify({"reviews": reviews}, new_avg), 200
 
 @app.route('/myreviews', methods=['POST'])
-@login_required
+@jwt_required()
 def add_review():
     data = request.get_json()
-    check_mycourse = MyCourse.query.filter_by(user_id=current_user.id, course_id=data['course_id']).first()
+    check_mycourse = MyCourse.query.filter_by(user_id=current_identity.id, course_id=data['course_id']).first().values()
     if not check_mycourse:
         return jsonify('Course not in user course list'), 404
     if check_mycourse.review:
@@ -196,18 +234,18 @@ def add_review():
         db.session.add(review)
         setattr(check_mycourse, 'review', review)
         db.session.commit()
-
+        # MyCourse.query.join(MyCourse.review).with_entities(func.avg(Review.enjoyability).label('average').filter(MyCourse.course_id, course_id=data['course_id']))
         return jsonify('Added review'), 200
     except:
         return jsonify("Could not add review"), 500
 
 @app.route('/myreviews/<id>', methods=['PUT'])
-@login_required
+@jwt_required()
 def edit_review(id):
     review = Review.query.filter_by(id=id).first()
     if not review:
         return jsonify('Review not found'), 404
-    if review.course.user_id is not current_user.id:
+    if review.course.user_id is not current_identity.id:
         return jsonify('Can only edit your reviews'), 403
 
     data = request.get_json()
@@ -228,12 +266,12 @@ def edit_review(id):
         return jsonify('Could not edit review'), 500
 
 @app.route('/myreviews/<id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_review(id):
     review = Review.query.filter_by(id=id).first()
     if not review:
         return jsonify('Review not found'), 404
-    if review.course.user_id is not current_user.id:
+    if review.course.user_id is not current_identity.id:
         return jsonify('Can only edit your reviews'), 403
 
     try:
