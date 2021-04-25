@@ -118,7 +118,7 @@ def get_mycourses():
             review = None
         to_return.append({'id': id, 'course': course, 'review': review})
 
-    return jsonify(to_return), 200
+    return jsonify({"mycourses": to_return}), 200
 
 
 @app.route('/mycourses', methods=['POST'])
