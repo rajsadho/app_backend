@@ -5,6 +5,7 @@ from sqlalchemy import func
 from flask_jwt import JWT, jwt_required, current_identity
 import os
 from datetime import timedelta
+from urllib import parse
 
 
 from models import db, User, Course, Employee, Review, MyCourse, Job
@@ -29,6 +30,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+    app.config['CORS_HEADERS'] = 'Content-Type'
     
     app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 1)
 
@@ -271,6 +273,7 @@ def get_teachers():
 def search_results():
     # data = request.get_json()
     query = request.args.get('course')
+    query = parse.unquote(query)
     if not query:
         return jsonify({"message": "Must submit a query"}), 404
 
@@ -287,7 +290,8 @@ def search_results():
         results = [result.toDict() for result in results]
         return jsonify({"results": results}), 200
 
-
+# @app.route('/myreviews/<id>', methods=['DELETE'])
+# @jwt_required()
 
 if __name__ == '__main__':
     app.run()
