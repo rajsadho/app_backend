@@ -32,6 +32,7 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
     
     app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 1)
+    app.config['CORS_HEADERS'] = 'Content-Type'
 
     db.init_app(app)
     return app
@@ -148,8 +149,20 @@ def delete_mycourse(id):
     course = MyCourse.query.filter_by(id=id, user_id=current_identity.id).first()
     if not course:
         return jsonify('Course not found'), 404
+
+    course_id = course.course_id    
     try:
         db.session.delete(course)
+        db.session.commit()
+
+        avg_enjoy = MyCourse.query.join(Review).with_entities(func.avg(Review.enjoyability).filter(MyCourse.course_id==course_id).label("avg")).scalar()
+        avg_diff = MyCourse.query.join(Review).with_entities(func.avg(Review.difficulty).filter(MyCourse.course_id==course_id).label("avg")).scalar()
+        # print(avg_enjoy, type(new_avg), flush=True)
+        avg_enjoy = round(float(avg_enjoy), 1)
+        avg_diff = round(float(avg_diff), 1)
+        setattr(review.course.course, 'enjoyability', avg_enjoy)
+        setattr(review.course.course, 'difficulty', avg_diff)      
+
         db.session.commit()
         return jsonify(''), 204
     except:
@@ -289,8 +302,14 @@ def search_results():
         results = [result.toDict() for result in results]
         return jsonify({"results": results}), 200
 
-# @app.route('/myreviews/<id>', methods=['DELETE'])
+# @app.route('/upvote', methods=['POST'])
 # @jwt_required()
+# def upvote():
+#     data = request.get_json()
+#     review = Review.query.filter_by(id=data['review_id']).one_or_none()
+#     if not review:
+#         return jsonify({'message': 'Review not found'}), 404
+    
 
 if __name__ == '__main__':
     app.run()
