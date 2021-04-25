@@ -57,6 +57,9 @@ class Review(db.Model):
     difficulty = db.Column(db.Integer, nullable=False)
     enjoyability = db.Column(db.Integer, nullable=False)
 
+    upvotes = db.Column(db.Integer, nullable=False, default=0)
+    downvotes = db.Column(db.Integer, nullable=False, default=0)
+
     mycourse_id = db.Column(db.Integer, db.ForeignKey('my_courses.id'))
 
     def toDict(self):
@@ -65,7 +68,9 @@ class Review(db.Model):
             'mycourse_id': self.mycourse_id,
             'text': self.text,
             'difficulty': self.difficulty,
-            'enjoyability': self.enjoyability
+            'enjoyability': self.enjoyability,
+            'upvotes': self.upvotes,
+            'downvotes': self.downvotes
         }
 
 class Course(db.Model):

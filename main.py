@@ -96,23 +96,8 @@ def get_course(id):
         if ucourse.review:
             reviews.append(ucourse.review.toDict())
 
-    to_send = {'teachers': teachers, 'reviews': reviews}
+    to_send = {'course': course.toDict(), 'teachers': teachers, 'reviews': reviews}
     return jsonify(to_send)
-
-@app.route('/course/<id>', methods=['DELETE'])
-@jwt_required()
-def delete_course(id):
-    course = Course.query.filter_by(id=id).first()
-    if not course:
-        return jsonify('Course not found'), 404
-
-    try:
-        db.session.delete(course)
-        db.session.commit()
-        return jsonify('Deleted'), 204
-    except Exception as e:
-        db.session.rollback()
-        return jsonify('Server Error: Could not delete resource'), 500
 
 @app.route('/mycourses', methods=['GET'])
 @jwt_required()
@@ -266,7 +251,7 @@ def delete_review(id):
         setattr(review.course.course, 'enjoyability', avg_enjoy)
         setattr(review.course.course, 'difficulty', avg_diff)
         db.session.commit()
-        
+
         return jsonify('Review deleted'), 200
     except:
         db.session.rollback()
