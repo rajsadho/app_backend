@@ -30,7 +30,6 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-    app.config['CORS_HEADERS'] = 'Content-Type'
     
     app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 1)
 
