@@ -2,8 +2,6 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-from sqlalchemy.sql.expression import cast
-# from flask_login import LoginManager, current_user, login_user, login_required, logout_user
 from flask_jwt import JWT, jwt_required, current_identity
 import os
 from datetime import timedelta
@@ -15,13 +13,6 @@ from models import db, User, Course, Employee, Review, MyCourse, Job
 # configuration
 DEBUG = True
 
-# ''' Begin Flask Login Functions '''
-# login_manager = LoginManager()
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return User.query.get(user_id)
-#
-# ''' End Flask Login Functions '''
 
 ''' Begin boilerplate code '''
 def create_app():
@@ -40,9 +31,7 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
     
     app.config['JWT_EXPIRATION_DELTA'] = timedelta(days = 1)
-       
-    
-    # login_manager.init_app(app)
+
     db.init_app(app)
     return app
 ''' End Boilerplate Code '''
@@ -87,32 +76,6 @@ def signup():
         return 'username or email already exists'
     return 'user created'
 
-# @app.route('/login', methods=['POST'])
-# def loginAction():
-#     data = request.get_json()
-#     user = User.query.filter_by(username = data['username']).first()
-#     if user and user.check_password(data['password']):
-#         login_user(user) # login the user
-#         return jsonify('Logged in'), 200
-
-#     return jsonify('Invalid credentials'), 401
-
-# @app.route("/login", methods=["POST"])
-# def login():
-#     username = request.json.get("username", None)
-#     password = request.json.get("password", None)
-#     user = User.query.filter_by(username = username).one_or_none()
-#     if not user or not user.check_password(password):
-#         return jsonify({"msg": "Bad username or password"}), 401
-
-#     access_token = create_access_token(identity=user)
-#     return jsonify(access_token=access_token), 200   
-
-# @app.route("/logout")
-# @jwt_required()
-# def logout():
-#     logout_user()
-#     return jsonify('Logged Out'), 200
 
 @app.route('/courses', methods=['GET'])
 def get_courses():
@@ -211,18 +174,16 @@ def get_reviews():
         if course.review:
             reviews.append(course.review.toDict())
 
-    # new_avg = MyCourse.query.with_entities(func.avg(MyCourse.review.enjoyability).label('average').filter(MyCourse.course_id, course_id=data['course_id']))
-    # new_avg = MyCourse.query.with_entities(func.avg(MyCourse.id))
     new_avg = MyCourse.query.join(Review).with_entities(func.avg(Review.enjoyability).filter(MyCourse.course_id==1).label("avg")).scalar()
     print(new_avg, type(new_avg), flush=True)
     new_avg = float(new_avg)
-    return jsonify({"reviews": reviews}, new_avg), 200
+    return jsonify({"reviews": reviews}), 200
 
 @app.route('/myreviews', methods=['POST'])
 @jwt_required()
 def add_review():
     data = request.get_json()
-    check_mycourse = MyCourse.query.filter_by(user_id=current_identity.id, course_id=data['course_id']).first().values()
+    check_mycourse = MyCourse.query.filter_by(user_id=current_identity.id, course_id=data['course_id']).first()
     if not check_mycourse:
         return jsonify('Course not in user course list'), 404
     if check_mycourse.review:
@@ -234,7 +195,16 @@ def add_review():
         db.session.add(review)
         setattr(check_mycourse, 'review', review)
         db.session.commit()
-        # MyCourse.query.join(MyCourse.review).with_entities(func.avg(Review.enjoyability).label('average').filter(MyCourse.course_id, course_id=data['course_id']))
+        
+        avg_enjoy = MyCourse.query.join(Review).with_entities(func.avg(Review.enjoyability).filter(MyCourse.course_id==data['course_id']).label("avg")).scalar()
+        avg_diff = MyCourse.query.join(Review).with_entities(func.avg(Review.difficulty).filter(MyCourse.course_id==data['course_id']).label("avg")).scalar()
+        # print(avg_enjoy, type(new_avg), flush=True)
+        avg_enjoy = round(float(avg_enjoy), 1)
+        avg_diff = round(float(avg_diff), 1)
+        setattr(check_mycourse.course, 'enjoyability', avg_enjoy)
+        setattr(check_mycourse.course, 'difficulty', avg_diff)
+        db.session.commit()
+
         return jsonify('Added review'), 200
     except:
         return jsonify("Could not add review"), 500
@@ -260,6 +230,16 @@ def edit_review(id):
     try:
         db.session.add(review)
         db.session.commit()
+
+        avg_enjoy = MyCourse.query.join(Review).with_entities(func.avg(Review.enjoyability).filter(MyCourse.course_id==review.course.course_id).label("avg")).scalar()
+        avg_diff = MyCourse.query.join(Review).with_entities(func.avg(Review.difficulty).filter(MyCourse.course_id==review.course.course_id).label("avg")).scalar()
+        # print(avg_enjoy, type(new_avg), flush=True)
+        avg_enjoy = round(float(avg_enjoy), 1)
+        avg_diff = round(float(avg_diff), 1)
+        setattr(review.course.course, 'enjoyability', avg_enjoy)
+        setattr(review.course.course, 'difficulty', avg_diff)
+        db.session.commit()
+
         return jsonify('Edited review'), 200
     except:
         db.session.rollback()
@@ -277,6 +257,16 @@ def delete_review(id):
     try:
         db.session.delete(review)
         db.session.commit()
+
+        avg_enjoy = MyCourse.query.join(Review).with_entities(func.avg(Review.enjoyability).filter(MyCourse.course_id==review.course.course_id).label("avg")).scalar()
+        avg_diff = MyCourse.query.join(Review).with_entities(func.avg(Review.difficulty).filter(MyCourse.course_id==review.course.course_id).label("avg")).scalar()
+        # print(avg_enjoy, type(new_avg), flush=True)
+        avg_enjoy = round(float(avg_enjoy), 1)
+        avg_diff = round(float(avg_diff), 1)
+        setattr(review.course.course, 'enjoyability', avg_enjoy)
+        setattr(review.course.course, 'difficulty', avg_diff)
+        db.session.commit()
+        
         return jsonify('Review deleted'), 200
     except:
         db.session.rollback()

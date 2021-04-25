@@ -18,10 +18,10 @@ for user in users:
 
 courses = []
 
-courses.append(Course(dept="COMP", num=2605, name='Enterprise Database Systems'))
-courses.append(Course(dept="INFO", num=1601, name='Introduction to WWW Programming'))
+courses.append(Course(dept="COMP", num=2605, name='Enterprise Database Systems', difficulty=1.5, enjoyability=(4+5)/2))
+courses.append(Course(dept="INFO", num=1601, name='Introduction to WWW Programming', difficulty=(5+2)/2, enjoyability=(2+1)/2))
 courses.append(Course(dept="INFO", num=2602, name='Web Programming & Technologies'))
-courses.append(Course(dept="INFO", num=2604, name='Information Systems Security'))
+courses.append(Course(dept="INFO", num=2604, name='Information Systems Security', difficulty=(5+2)/2, enjoyability=(5+1)/2))
 
 for course in courses:
     db.session.add(course)

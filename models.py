@@ -75,8 +75,8 @@ class Course(db.Model):
     dept = db.Column(db.String(4), nullable=False)
     num = db.Column(db.String(4), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    difficulty = db.Column(db.Integer, nullable=False, default=0)
-    enjoyability = db.Column(db.Integer, nullable=False, default=0)
+    difficulty = db.Column(db.Float, nullable=False, default=0)
+    enjoyability = db.Column(db.Float, nullable=False, default=0)
 
     course_code = column_property(dept+num)
     
@@ -90,7 +90,9 @@ class Course(db.Model):
             'id': self.id,
             'dept': self.dept,
             'num': self.num,
-            'name': self.name
+            'name': self.name,
+            'difficulty': self.difficulty,
+            'enjoyability': self.enjoyability
         }
 
 class Employee(db.Model):
