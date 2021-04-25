@@ -265,27 +265,27 @@ def delete_review(id):
 def get_teachers():
     employees = Employee.query.all()
     employees = [employee.toDict() for employee in employees]
-    return jsonify(employees)
+    return jsonify({"teachers": employees})
 
 @app.route('/courses/search', methods=['GET'])
 def search_results():
     # data = request.get_json()
     query = request.args.get('course')
     if not query:
-        return jsonify("Must submit a query"), 404
+        return jsonify({"message": "Must submit a query"}), 404
 
     results = Course.query.filter(func.lower(Course.course_code).contains(query.lower())).all()
     if results:
         results = [result.toDict() for result in results]
-        return jsonify(results), 200
+        return jsonify({"results": results}), 200
 
     results = Course.query.filter(func.lower(Course.name).contains(query.lower())).all()
 
     if not results:
-        return jsonify("Course not found"), 404
+        return jsonify({"message": "Course not found"}), 404
     else:
         results = [result.toDict() for result in results]
-        return jsonify(results), 200
+        return jsonify({"results": results}), 200
 
 
 
