@@ -89,7 +89,11 @@ def get_course(id):
     if not course:
         return jsonify('Course not found'), 404
 
-    teachers = [teacher.toDict() for teacher in course.employees]
+    teachers = []
+    for job in course.jobs:
+        teacher = job.employee.toDict()
+        teacher['position'] = job.position
+        teachers.append(teacher)
 
     reviews = []
     for ucourse in course.my_courses:
@@ -282,7 +286,8 @@ def search_results():
     else:
         results = [result.toDict() for result in results]
         return jsonify(results), 200
-    
+
+
 
 if __name__ == '__main__':
     app.run()
